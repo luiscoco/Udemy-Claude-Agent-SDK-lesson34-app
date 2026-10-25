@@ -1,0 +1,94 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent SDK LESSON 34 · Architecture and &lt;em&gt;UML workflow.&lt;/em&gt;</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/code-highlighting.css"></head><body><main><div class="brand"><a href="/">How <span>Claude Agent SDK</span> Works</a><span class="badge">LESSON 34 / HOOKS IN PRACTICE</span></div><header class="hero"><div><div class="eyebrow">OBSERVE · CONNECT · TROUBLESHOOT</div><h1>Architecture and <em>UML workflow.</em></h1><p class="lead">Every workflow step includes its corresponding coloured code excerpt.</p></div><img src="/astronaut.png" alt="Course astronaut mascot"></header><nav class="nav" aria-label="Application sections"><a href="/">Application lab</a><a href="/learn.html">What you will learn</a><a href="/run.html">How to run</a><a href="/architecture.html" aria-current="page">Architecture & workflow</a><a href="/walkthrough.html">Code walkthrough</a><button id="theme" type="button">Dark mode</button></nav><p class="note">The diagram groups alternative experiments and logical roles. Matching callbacks can run in parallel; the numbered teaching steps are not a guaranteed internal hook execution order.</p><a class="button" href="/architecture.svg" download>Download UML SVG</a><div class="diagram"><img src="/architecture.svg" alt="Thirteen source-linked hook workflow steps"></div><section class="step workflow-step" id="workflow-step-01"><span class="number">01</span><h3>1. Validate the fixed classroom experiment</h3><p>Accept a listed mode and bounded prediction. Browser input cannot supply a webhook URL, arbitrary tool or hook code.</p><p class="source">Source: src/modes.ts · lines 52–58 · selected source; surrounding code omitted</p><pre><code class="language-typescript">export function validateConfig(value: unknown): RunConfig {
+  if (
+    !value ||
+    typeof value !== &quot;object&quot; ||
+    Array.isArray(value) ||
+    !MODES.includes((value as RunConfig).mode)
+  )</code></pre></section><section class="step workflow-step" id="workflow-step-02"><span class="number">02</span><h3>2. Start a per-run local receiver</h3><p>Bind to a random available loopback port. The receiver records actual requests and responses; it is separate from any external Slack workspace.</p><p class="source">Source: src/collector.ts · lines 71–76 · selected source; surrounding code omitted</p><pre><code class="language-typescript">server.listen(0, &quot;127.0.0.1&quot;, ok);
+  });
+  const address = server.address();
+  if (!address || typeof address === &quot;string&quot;)
+    throw new Error(&quot;Local receiver unavailable.&quot;);
+  return {</code></pre></section><section class="step workflow-step" id="workflow-step-03"><span class="number">03</span><h3>3. Bound the actual Read request</h3><p>Only lesson.txt can be read. The notification experiment returns ask so an actual pending review can generate permission_prompt.</p><p class="source">Source: src/hooks.ts · lines 63–72 · selected source; surrounding code omitted</p><pre><code class="language-typescript">const guard: HookCallback = async (input) =&gt; {
+    if (input.hook_event_name !== &quot;PreToolUse&quot;) return {};
+    if (
+      !hostAllows(
+        cwd,
+        input.tool_name,
+        input.tool_input as Record&lt;string, unknown&gt;,
+      )
+    )
+      return {</code></pre></section><section class="step workflow-step" id="workflow-step-04"><span class="number">04</span><h3>4. Register the selected matcher and timeout</h3><p>The intentionally wrong file-name matcher misses Read. The corrected matcher selects the tool name. Timeout is configured in seconds on the matcher entry.</p><p class="source">Source: src/hooks.ts · lines 173–180 · selected source; surrounding code omitted</p><pre><code class="language-typescript">matcher: mode === &quot;matcher-miss&quot; ? &quot;lesson.txt&quot; : &quot;Read&quot;,
+              ...(mode === &quot;timeout-post&quot; ? { timeout: 1 } : {}),
+              hooks: [wrap(&quot;auditWebhook&quot;, audit)],
+            },
+          ]),
+    ],
+    Notification: [{ hooks: [wrap(&quot;notificationForwarder&quot;, notify)] }],
+    SubagentStop: [</code></pre></section><section class="step workflow-step" id="workflow-step-05"><span class="number">05</span><h3>5. Start the real SDK query</h3><p>The SDK owns model and tool orchestration. Hook callbacks and native results are actual observations, not browser simulations.</p><p class="source">Source: src/agent.ts · lines 215–217 · selected source; surrounding code omitted</p><pre><code class="language-typescript">const active = query({ prompt: input(), options });
+    run = active;
+    for await (const message of active) {</code></pre></section><section class="step workflow-step" id="workflow-step-06"><span class="number">06</span><h3>6. Capture actual callback data</h3><p>Record the event, input, output, tool-use ID and abort state. Notification metadata is preserved separately from tool input.</p><p class="source">Source: src/hooks.ts · lines 33–42 · selected source; surrounding code omitted</p><pre><code class="language-typescript">const output = await callback(input, id, context);
+      record({
+        hook: name,
+        event: input.hook_event_name,
+        tool: &quot;tool_name&quot; in input ? String(input.tool_name) : null,
+        toolUseID: id ?? null,
+        sessionId: input.session_id,
+        cwd: input.cwd,
+        input:
+          &quot;tool_input&quot; in input</code></pre></section><section class="step workflow-step" id="workflow-step-07"><span class="number">07</span><h3>7. Send JSON and pass the AbortSignal</h3><p>Post bounded JSON with Content-Type and AbortSignal. A successful fetch promise alone does not imply a successful HTTP status.</p><p class="source">Source: src/integrations.ts · lines 10–17 · selected source; surrounding code omitted</p><pre><code class="language-typescript">const response = await fetch(url, {
+      method: &quot;POST&quot;,
+      headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+      body: JSON.stringify(payload),
+      signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    note(&quot;http-result&quot;, channel, { status: response.status });</code></pre></section><section class="step workflow-step" id="workflow-step-08"><span class="number">08</span><h3>8. Catch reporting failures inside the hook</h3><p>Check HTTP status, catch transport or cancellation errors and record them without rethrowing. Reporting failures must not erase an already successful tool result.</p><p class="source">Source: src/integrations.ts · lines 16–24 · selected source; surrounding code omitted</p><pre><code class="language-typescript">if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    note(&quot;http-result&quot;, channel, { status: response.status });
+  } catch (error) {
+    note(&quot;http-error&quot;, channel, {
+      message: error instanceof Error ? error.message : &quot;Delivery failed&quot;,
+      aborted: signal.aborted,
+    });
+    // A reporting integration must not discard a successful tool result.
+  }</code></pre></section><section class="step workflow-step" id="workflow-step-09"><span class="number">09</span><h3>9. Return async output and track the task</h3><p>Start the actual delivery, retain its promise and return async output. Background-only work cannot retroactively block or modify the tool.</p><p class="source">Source: src/hooks.ts · lines 117–128 · selected source; surrounding code omitted</p><pre><code class="language-typescript">const work = deliver(
+        url + &quot;/audit&quot;,
+        payload,
+        AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+        note,
+      ).finally(() =&gt; {
+        note(&quot;async-complete&quot;, &quot;audit&quot;, { tool: input.tool_name });
+      });
+      track(work);
+      return { async: true, asyncTimeout: 10000 };
+    }
+    const requestSignal =</code></pre></section><section class="step workflow-step" id="workflow-step-10"><span class="number">10</span><h3>10. Forward the actual notification message</h3><p>Build a Slack-format text payload from the real Notification message. The classroom target is the per-run local receiver; no external Slack delivery is claimed.</p><p class="source">Source: src/hooks.ts · lines 135–144 · selected source; surrounding code omitted</p><pre><code class="language-typescript">const notify: HookCallback = async (input, id, { signal }) =&gt; {
+    if (input.hook_event_name !== &quot;Notification&quot;) return {};
+    await deliver(
+      url + &quot;/slack&quot;,
+      { text: `Agent status: ${input.message}` },
+      signal,
+      note,
+      &quot;slack&quot;,
+    );
+    return {};</code></pre></section><section class="step workflow-step" id="workflow-step-11"><span class="number">11</span><h3>11. Set a one-second pre-tool hook timeout</h3><p>Set timeout on the PreToolUse matcher and honour the supplied signal. Compare the observed blocked read with the post-tool case where the original tool result is retained.</p><p class="source">Source: src/hooks.ts · lines 152–156 · selected source; surrounding code omitted</p><pre><code class="language-typescript">matcher: &quot;Read&quot;,
+              timeout: 1,
+              hooks: [wrap(&quot;slowPreHook&quot;, slowPre)],
+            },
+          ]</code></pre></section><section class="step workflow-step" id="workflow-step-12"><span class="number">12</span><h3>12. Record actual receiver status and cancellation</h3><p>Record a response only when it is actually sent. A cancelled request has no fabricated success status; its close event records the aborted connection.</p><p class="source">Source: src/collector.ts · lines 49–58 · selected source; surrounding code omitted</p><pre><code class="language-typescript">receipt.respondedAt = Date.now();
+        receipt.status = status;
+        res.writeHead(status, { &quot;Content-Type&quot;: &quot;application/json&quot; });
+        res.end(JSON.stringify({ ok: status === 200 }));
+        note(&quot;receiver-response&quot;, channel, { status });
+      }, delay);
+      timers.add(timer);
+      res.on(&quot;close&quot;, () =&gt; {
+        clearTimeout(timer);
+        timers.delete(timer);</code></pre></section><section class="step workflow-step" id="workflow-step-13"><span class="number">13</span><h3>13. Drain tracked work and inspect evidence</h3><p>Wait for tracked reporting work before collecting final receipts and the unchanged fixture. Actual timestamps establish callback return, SDK progress and background completion order.</p><p class="source">Source: src/agent.ts · lines 279–286 · selected source; surrounding code omitted</p><pre><code class="language-typescript">await Promise.allSettled(background);
+    await new Promise((ok) =&gt; setTimeout(ok, 50));
+    const files = await workspace.inspect();
+    const observedOutcome = completed.length
+      ? nativeErrors
+        ? &quot;mixed&quot;
+        : &quot;execute&quot;
+      : &quot;block&quot;;</code></pre></section><footer>CLAUDE AGENT SDK · LESSON 34 · WEBHOOKS · NOTIFICATIONS · TIMEOUTS<br>TypeScript · local runtime · API key stays on the server</footer></main><script src="/navigation.js"></script><script src="/prism.js"></script><script src="/prism-markup.min.js"></script><script src="/prism-yaml.min.js"></script><script src="/prism-markdown.min.js"></script><script src="/prism-python.min.js"></script><script src="/code-highlighting.js"></script><script src="/marked.umd.js"></script><script src="/purify.min.js"></script></body></html>

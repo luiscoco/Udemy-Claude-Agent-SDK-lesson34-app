@@ -1,0 +1,273 @@
+{
+  "lanes": [
+    "Student UI",
+    "TypeScript host",
+    "Agent SDK",
+    "Hook callbacks",
+    "Local HTTP receiver"
+  ],
+  "arrows": [
+    [
+      0,
+      1,
+      "1. Validate the fixed classroom experiment"
+    ],
+    [
+      1,
+      4,
+      "2. Start a per-run local receiver"
+    ],
+    [
+      3,
+      2,
+      "3. Bound the actual Read request"
+    ],
+    [
+      1,
+      3,
+      "4. Register the selected matcher and timeout"
+    ],
+    [
+      1,
+      2,
+      "5. Start the real SDK query"
+    ],
+    [
+      2,
+      3,
+      "6. Capture actual callback data"
+    ],
+    [
+      3,
+      4,
+      "7. Send JSON and pass the AbortSignal"
+    ],
+    [
+      4,
+      3,
+      "8. Catch reporting failures inside the hook"
+    ],
+    [
+      3,
+      2,
+      "9. Return async output and track the task"
+    ],
+    [
+      2,
+      4,
+      "10. Forward the actual notification message"
+    ],
+    [
+      1,
+      3,
+      "11. Set a one-second pre-tool hook timeout"
+    ],
+    [
+      4,
+      1,
+      "12. Record actual receiver status and cancellation"
+    ],
+    [
+      3,
+      1,
+      "13. Drain tracked work and inspect evidence"
+    ]
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Validate the fixed classroom experiment",
+      "source": "src/modes.ts",
+      "code": "export function validateConfig(value: unknown): RunConfig {\n  if (\n    !value ||\n    typeof value !== \"object\" ||\n    Array.isArray(value) ||\n    !MODES.includes((value as RunConfig).mode)\n  )",
+      "language": "typescript",
+      "explanation": "Accept a listed mode and bounded prediction. Browser input cannot supply a webhook URL, arbitrary tool or hook code.",
+      "firstLine": 52,
+      "lastLine": 58,
+      "anchors": [
+        "export function validateConfig(value: unknown): RunConfig {"
+      ],
+      "sourceSHA256": "765e450e9abaeb2302288a3f713e2615414be4e40b123625315826d97ce52b5d",
+      "narration": "Step 1. Accept a listed mode and bounded prediction. Browser input cannot supply a webhook URL, arbitrary tool or hook code. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 2,
+      "title": "Start a per-run local receiver",
+      "source": "src/collector.ts",
+      "code": "server.listen(0, \"127.0.0.1\", ok);\n  });\n  const address = server.address();\n  if (!address || typeof address === \"string\")\n    throw new Error(\"Local receiver unavailable.\");\n  return {",
+      "language": "typescript",
+      "explanation": "Bind to a random available loopback port. The receiver records actual requests and responses; it is separate from any external Slack workspace.",
+      "firstLine": 71,
+      "lastLine": 76,
+      "anchors": [
+        "server.listen(0, \"127.0.0.1\", ok);"
+      ],
+      "sourceSHA256": "f855f9ea2066613cfc7d9d1a97d9af850cf46aba7da56140dd0ffb7699846dec",
+      "narration": "Step 2. Bind to a random available loopback port. The receiver records actual requests and responses; it is separate from any external Slack workspace. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 3,
+      "title": "Bound the actual Read request",
+      "source": "src/hooks.ts",
+      "code": "const guard: HookCallback = async (input) => {\n    if (input.hook_event_name !== \"PreToolUse\") return {};\n    if (\n      !hostAllows(\n        cwd,\n        input.tool_name,\n        input.tool_input as Record<string, unknown>,\n      )\n    )\n      return {",
+      "language": "typescript",
+      "explanation": "Only lesson.txt can be read. The notification experiment returns ask so an actual pending review can generate permission_prompt.",
+      "firstLine": 63,
+      "lastLine": 72,
+      "anchors": [
+        "const guard: HookCallback = async (input) => {"
+      ],
+      "sourceSHA256": "a982bd4674c75527d03c0d148c3d473a354343f8b871d0eefb9545ee32c7214c",
+      "narration": "Step 3. Only lesson.txt can be read. The notification experiment returns ask so an actual pending review can generate permission_prompt. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 4,
+      "title": "Register the selected matcher and timeout",
+      "source": "src/hooks.ts",
+      "code": "matcher: mode === \"matcher-miss\" ? \"lesson.txt\" : \"Read\",\n              ...(mode === \"timeout-post\" ? { timeout: 1 } : {}),\n              hooks: [wrap(\"auditWebhook\", audit)],\n            },\n          ]),\n    ],\n    Notification: [{ hooks: [wrap(\"notificationForwarder\", notify)] }],\n    SubagentStop: [",
+      "language": "typescript",
+      "explanation": "The intentionally wrong file-name matcher misses Read. The corrected matcher selects the tool name. Timeout is configured in seconds on the matcher entry.",
+      "firstLine": 173,
+      "lastLine": 180,
+      "anchors": [
+        "matcher: mode === \"matcher-miss\" ? \"lesson.txt\" : \"Read\","
+      ],
+      "sourceSHA256": "a982bd4674c75527d03c0d148c3d473a354343f8b871d0eefb9545ee32c7214c",
+      "narration": "Step 4. The intentionally wrong file-name matcher misses Read. The corrected matcher selects the tool name. Timeout is configured in seconds on the matcher entry. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 5,
+      "title": "Start the real SDK query",
+      "source": "src/agent.ts",
+      "code": "const active = query({ prompt: input(), options });\n    run = active;\n    for await (const message of active) {",
+      "language": "typescript",
+      "explanation": "The SDK owns model and tool orchestration. Hook callbacks and native results are actual observations, not browser simulations.",
+      "firstLine": 215,
+      "lastLine": 217,
+      "anchors": [
+        "const active = query({ prompt: input(), options });"
+      ],
+      "sourceSHA256": "4b83780a8b17498140d94b899bf4aa48742c45cf2ac81dd82a512ff437e30af5",
+      "narration": "Step 5. The SDK owns model and tool orchestration. Hook callbacks and native results are actual observations, not browser simulations. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 6,
+      "title": "Capture actual callback data",
+      "source": "src/hooks.ts",
+      "code": "const output = await callback(input, id, context);\n      record({\n        hook: name,\n        event: input.hook_event_name,\n        tool: \"tool_name\" in input ? String(input.tool_name) : null,\n        toolUseID: id ?? null,\n        sessionId: input.session_id,\n        cwd: input.cwd,\n        input:\n          \"tool_input\" in input",
+      "language": "typescript",
+      "explanation": "Record the event, input, output, tool-use ID and abort state. Notification metadata is preserved separately from tool input.",
+      "firstLine": 33,
+      "lastLine": 42,
+      "anchors": [
+        "const output = await callback(input, id, context);"
+      ],
+      "sourceSHA256": "a982bd4674c75527d03c0d148c3d473a354343f8b871d0eefb9545ee32c7214c",
+      "narration": "Step 6. Record the event, input, output, tool-use ID and abort state. Notification metadata is preserved separately from tool input. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 7,
+      "title": "Send JSON and pass the AbortSignal",
+      "source": "src/integrations.ts",
+      "code": "const response = await fetch(url, {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify(payload),\n      signal,\n    });\n    if (!response.ok) throw new Error(`HTTP ${response.status}`);\n    note(\"http-result\", channel, { status: response.status });",
+      "language": "typescript",
+      "explanation": "Post bounded JSON with Content-Type and AbortSignal. A successful fetch promise alone does not imply a successful HTTP status.",
+      "firstLine": 10,
+      "lastLine": 17,
+      "anchors": [
+        "const response = await fetch(url, {"
+      ],
+      "sourceSHA256": "ad7ee7d8c7ff431625de944e3fdffd024f01954ab44450454944f71b5d5d0720",
+      "narration": "Step 7. Post bounded JSON with Content-Type and AbortSignal. A successful fetch promise alone does not imply a successful HTTP status. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 8,
+      "title": "Catch reporting failures inside the hook",
+      "source": "src/integrations.ts",
+      "code": "if (!response.ok) throw new Error(`HTTP ${response.status}`);\n    note(\"http-result\", channel, { status: response.status });\n  } catch (error) {\n    note(\"http-error\", channel, {\n      message: error instanceof Error ? error.message : \"Delivery failed\",\n      aborted: signal.aborted,\n    });\n    // A reporting integration must not discard a successful tool result.\n  }",
+      "language": "typescript",
+      "explanation": "Check HTTP status, catch transport or cancellation errors and record them without rethrowing. Reporting failures must not erase an already successful tool result.",
+      "firstLine": 16,
+      "lastLine": 24,
+      "anchors": [
+        "if (!response.ok) throw new Error(`HTTP ${response.status}`);"
+      ],
+      "sourceSHA256": "ad7ee7d8c7ff431625de944e3fdffd024f01954ab44450454944f71b5d5d0720",
+      "narration": "Step 8. Check HTTP status, catch transport or cancellation errors and record them without rethrowing. Reporting failures must not erase an already successful tool result. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 9,
+      "title": "Return async output and track the task",
+      "source": "src/hooks.ts",
+      "code": "const work = deliver(\n        url + \"/audit\",\n        payload,\n        AbortSignal.any([signal, AbortSignal.timeout(10000)]),\n        note,\n      ).finally(() => {\n        note(\"async-complete\", \"audit\", { tool: input.tool_name });\n      });\n      track(work);\n      return { async: true, asyncTimeout: 10000 };\n    }\n    const requestSignal =",
+      "language": "typescript",
+      "explanation": "Start the actual delivery, retain its promise and return async output. Background-only work cannot retroactively block or modify the tool.",
+      "firstLine": 117,
+      "lastLine": 128,
+      "anchors": [
+        "const work = deliver("
+      ],
+      "sourceSHA256": "a982bd4674c75527d03c0d148c3d473a354343f8b871d0eefb9545ee32c7214c",
+      "narration": "Step 9. Start the actual delivery, retain its promise and return async output. Background-only work cannot retroactively block or modify the tool. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 10,
+      "title": "Forward the actual notification message",
+      "source": "src/hooks.ts",
+      "code": "const notify: HookCallback = async (input, id, { signal }) => {\n    if (input.hook_event_name !== \"Notification\") return {};\n    await deliver(\n      url + \"/slack\",\n      { text: `Agent status: ${input.message}` },\n      signal,\n      note,\n      \"slack\",\n    );\n    return {};",
+      "language": "typescript",
+      "explanation": "Build a Slack-format text payload from the real Notification message. The classroom target is the per-run local receiver; no external Slack delivery is claimed.",
+      "firstLine": 135,
+      "lastLine": 144,
+      "anchors": [
+        "const notify: HookCallback = async (input, id, { signal }) => {"
+      ],
+      "sourceSHA256": "a982bd4674c75527d03c0d148c3d473a354343f8b871d0eefb9545ee32c7214c",
+      "narration": "Step 10. Build a Slack-format text payload from the real Notification message. The classroom target is the per-run local receiver; no external Slack delivery is claimed. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 11,
+      "title": "Set a one-second pre-tool hook timeout",
+      "source": "src/hooks.ts",
+      "code": "matcher: \"Read\",\n              timeout: 1,\n              hooks: [wrap(\"slowPreHook\", slowPre)],\n            },\n          ]",
+      "language": "typescript",
+      "explanation": "Set timeout on the PreToolUse matcher and honour the supplied signal. Compare the observed blocked read with the post-tool case where the original tool result is retained.",
+      "firstLine": 152,
+      "lastLine": 156,
+      "anchors": [
+        "matcher: \"Read\","
+      ],
+      "sourceSHA256": "a982bd4674c75527d03c0d148c3d473a354343f8b871d0eefb9545ee32c7214c",
+      "narration": "Step 11. Set timeout on the PreToolUse matcher and honour the supplied signal. Compare the observed blocked read with the post-tool case where the original tool result is retained. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 12,
+      "title": "Record actual receiver status and cancellation",
+      "source": "src/collector.ts",
+      "code": "receipt.respondedAt = Date.now();\n        receipt.status = status;\n        res.writeHead(status, { \"Content-Type\": \"application/json\" });\n        res.end(JSON.stringify({ ok: status === 200 }));\n        note(\"receiver-response\", channel, { status });\n      }, delay);\n      timers.add(timer);\n      res.on(\"close\", () => {\n        clearTimeout(timer);\n        timers.delete(timer);",
+      "language": "typescript",
+      "explanation": "Record a response only when it is actually sent. A cancelled request has no fabricated success status; its close event records the aborted connection.",
+      "firstLine": 49,
+      "lastLine": 58,
+      "anchors": [
+        "receipt.respondedAt = Date.now();"
+      ],
+      "sourceSHA256": "f855f9ea2066613cfc7d9d1a97d9af850cf46aba7da56140dd0ffb7699846dec",
+      "narration": "Step 12. Record a response only when it is actually sent. A cancelled request has no fabricated success status; its close event records the aborted connection. This source excerpt shows the corresponding application statement."
+    },
+    {
+      "number": 13,
+      "title": "Drain tracked work and inspect evidence",
+      "source": "src/agent.ts",
+      "code": "await Promise.allSettled(background);\n    await new Promise((ok) => setTimeout(ok, 50));\n    const files = await workspace.inspect();\n    const observedOutcome = completed.length\n      ? nativeErrors\n        ? \"mixed\"\n        : \"execute\"\n      : \"block\";",
+      "language": "typescript",
+      "explanation": "Wait for tracked reporting work before collecting final receipts and the unchanged fixture. Actual timestamps establish callback return, SDK progress and background completion order.",
+      "firstLine": 279,
+      "lastLine": 286,
+      "anchors": [
+        "await Promise.allSettled(background);"
+      ],
+      "sourceSHA256": "4b83780a8b17498140d94b899bf4aa48742c45cf2ac81dd82a512ff437e30af5",
+      "narration": "Step 13. Wait for tracked reporting work before collecting final receipts and the unchanged fixture. Actual timestamps establish callback return, SDK progress and background completion order. This source excerpt shows the corresponding application statement."
+    }
+  ]
+}
